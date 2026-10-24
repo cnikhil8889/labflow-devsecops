@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+reports/
+*.tgz
+.env
+bin/
+obj/

@@ -1,0 +1,87 @@
+name: LabFlow delivery checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m unittest discover -s tests -v
+      - uses: actions/setup-dotnet@v4
+        with: {dotnet-version: '8.0.x'}
+      - run: dotnet build clients/LabFlow.Check --configuration Release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-client-${{ matrix.os }}
+          path: clients/LabFlow.Check/bin/Release/net8.0/
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install bandit==1.8.6
+      - run: bandit -r app scripts -x scripts/smoke.py -ll
+      - uses: trufflesecurity/trufflehog@v3.90.8
+        with:
+          extra_args: --only-verified
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+  container-and-helm:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t labflow:0.1.0 .
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: labflow:0.1.0
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          format: table
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: labflow:0.1.0
+          format: cyclonedx
+          output: sbom.cdx.json
+      - uses: azure/setup-helm@v4.3.0
+        with: {version: v3.17.3}
+      - run: helm lint charts/labflow && helm template labflow charts/labflow > rendered.yaml
+      - uses: actions/setup-dotnet@v4
+        with: {dotnet-version: '8.0.x'}
+      - uses: helm/kind-action@v1.12.0
+      - run: |
+          kind load docker-image labflow:0.1.0 --name chart-testing
+          IMAGE_TAG=0.1.0 bash scripts/deploy.sh
+          kubectl port-forward -n labflow service/labflow 8080:8080 > /tmp/forward.log 2>&1 &
+          for attempt in $(seq 1 20); do
+            if curl --fail http://127.0.0.1:8080/healthz; then break; fi
+            sleep 1
+          done
+          python scripts/smoke.py
+          dotnet run --project clients/LabFlow.Check
+      - run: helm package charts/labflow
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence
+          path: |
+            sbom.cdx.json
+            rendered.yaml
+            labflow-*.tgz
