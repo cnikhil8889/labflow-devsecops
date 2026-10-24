@@ -1,4 +1,5 @@
 FROM python:3.12-slim
+LABEL org.opencontainers.image.authors="CNK - Nikhil Kumar Choudavarapu" org.opencontainers.image.title="CNK LabFlow DevSecOps"
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HOST=0.0.0.0 PORT=8080
 WORKDIR /service
 COPY --chown=10001:10001 app /service/app
