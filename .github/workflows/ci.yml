@@ -37,7 +37,7 @@ jobs:
         with: {python-version: '3.12'}
       - run: pip install bandit==1.8.6
       - run: bandit -r app scripts -x scripts/smoke.py -ll
-      - uses: trufflesecurity/trufflehog@v3.90.8
+      - uses: trufflesecurity/trufflehog@v3.99.3
         with:
           extra_args: --only-verified
       - uses: aquasecurity/trivy-action@v0.36.0
