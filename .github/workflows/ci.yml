@@ -61,7 +61,7 @@ jobs:
           image-ref: labflow:0.1.0
           format: cyclonedx
           output: sbom.cdx.json
-      - uses: azure/setup-helm@v4.3.0
+      - uses: azure/setup-helm@v5.0.1
         with: {version: v3.17.3}
       - run: helm lint charts/labflow && helm template labflow charts/labflow > rendered.yaml
       - uses: actions/setup-dotnet@v4
