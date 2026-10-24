@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t labflow:0.1.0 .
+      - run: docker build --pull -t labflow:0.1.0 .
       - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: labflow:0.1.0
