@@ -1,4 +1,4 @@
-FROM python:3.12.15-alpine3.24
+FROM python:3.15.0-alpine3.24
 # CNK: patch the minimal runtime; keep HIGH/CRITICAL image scanning enforced.
 RUN apk upgrade --no-cache
 LABEL org.opencontainers.image.authors="CNK - Nikhil Kumar Choudavarapu" org.opencontainers.image.title="CNK LabFlow DevSecOps"
