@@ -5,7 +5,7 @@
 ![CNK build](https://github.com/cnikhil8889/labflow-devsecops/actions/workflows/ci.yml/badge.svg)
 
 
-A portfolio delivery platform for a **synthetic laboratory run registry**. Built by Nikhil Kumar Choudavarapu as an independent learning project aligned to Thermo Fisher Scientific Engineer II, DevOps Engineering (R-01361623). No affiliation, company code, production data or validated medical functionality.
+A portfolio delivery platform for a **synthetic laboratory run registry**. Built by Nikhil Kumar Choudavarapu(ME) as an independent learning project aligned to DevOps Engineering. No affiliation, company code, production data or validated medical functionality.
 
 The engineering focus is the delivery system: cross-platform testing, Linux containers, secure SDLC gates, packaged artifacts, Kubernetes/Helm deployment and systematic incident diagnosis.
 
