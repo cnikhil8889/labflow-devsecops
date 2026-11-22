@@ -55,5 +55,40 @@ class ServiceTests(unittest.TestCase):
         self.registry.runs = {str(i): {} for i in range(1000)}
         self.assertEqual(self.request("POST", "/runs", '{"run_id":"new","instrument":"demo","status":"queued"}')[0], 503)
 
+    def test_every_valid_status_is_accepted(self):
+        for index, status in enumerate(("queued", "running", "completed", "failed")):
+            run = {"run_id": f"status-{index}", "instrument": "demo", "status": status}
+            self.assertEqual(self.request("POST", "/runs", json.dumps(run)), (201, run))
+        self.assertEqual(len(self.request("GET", "/runs")[1]["runs"]), 4)
+
+    def test_identifier_length_boundaries(self):
+        longest = {"run_id": "a" * 64, "instrument": "b" * 64, "status": "queued"}
+        self.assertEqual(self.request("POST", "/runs", json.dumps(longest))[0], 201)
+        for key in ("run_id", "instrument"):
+            run = {"run_id": "ok", "instrument": "ok", "status": "queued"}
+            run[key] = "x" * 65
+            self.assertEqual(self.request("POST", "/runs", json.dumps(run))[0], 400, key)
+            run[key] = ""
+            self.assertEqual(self.request("POST", "/runs", json.dumps(run))[0], 400, key)
+
+    def test_extra_fields_are_rejected(self):
+        run = {"run_id": "x", "instrument": "x", "status": "queued", "owner": "someone"}
+        self.assertEqual(self.request("POST", "/runs", json.dumps(run))[0], 400)
+        self.assertEqual(self.request("GET", "/runs")[1], {"runs": []})
+
+    def test_post_to_unknown_path_is_not_found(self):
+        run = {"run_id": "x", "instrument": "x", "status": "queued"}
+        self.assertEqual(self.request("POST", "/healthz", json.dumps(run))[0], 404)
+        self.assertEqual(self.request("GET", "/runs")[1], {"runs": []})
+
+    def test_responses_are_json_with_nosniff(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=3)
+        connection.request("GET", "/healthz")
+        response = connection.getresponse()
+        response.read()
+        connection.close()
+        self.assertEqual(response.getheader("Content-Type"), "application/json")
+        self.assertEqual(response.getheader("X-Content-Type-Options"), "nosniff")
+
 if __name__ == "__main__":
     unittest.main()
