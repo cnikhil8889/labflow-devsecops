@@ -39,6 +39,41 @@ The service validates identifiers and states, rejects duplicates atomically, lim
 
 Git push / PR → Linux + Windows Python tests and .NET build → code, dependency, secrets and image scans → Docker image → local kind cluster → atomic Helm install/upgrade → Python + .NET smoke checks → Helm chart and CycloneDX SBOM artifacts.
 
+```mermaid
+flowchart LR
+    dev[Push / PR] --> test
+    subgraph test[test · matrix]
+        lin[Ubuntu: unittest + .NET build]
+        win[Windows: unittest + .NET build]
+    end
+    dev --> sec
+    subgraph sec[security]
+        bandit[Bandit SAST]
+        th[TruffleHog secrets]
+        tfs[Trivy filesystem scan]
+    end
+    test --> img
+    sec --> img
+    subgraph cd[container-and-helm]
+        img[Docker build] --> tri[Trivy image scan + CycloneDX SBOM]
+        tri --> lint[helm lint / template]
+        lint --> kind[kind cluster]
+        kind --> deploy[Atomic Helm install]
+        deploy --> smoke[Python + .NET smoke checks]
+    end
+    smoke --> art[(Artifacts: chart .tgz, SBOM, rendered manifests, build-info)]
+```
+
+| Gate | Tool | Fails the build on |
+| --- | --- | --- |
+| Unit tests | Python `unittest` (Linux + Windows) | any failing test |
+| SAST | Bandit | medium+ severity findings |
+| Secrets | TruffleHog | verified secrets in history |
+| Dependencies / config | Trivy fs | HIGH or CRITICAL findings |
+| Container image | Trivy image | HIGH or CRITICAL findings |
+| Chart | `helm lint` | invalid chart |
+| Deployment | kind + Helm `--atomic` + smoke checks | failed rollout or smoke check |
+
 GitHub Actions does not deploy to a paid cloud or publish packages. It runs an ephemeral Kubernetes integration test. The .NET 8 console client validates the deployed service; PowerShell provides a Windows check entrypoint. The web delivery track is implemented; C++/Qt/CMake desktop delivery is outside this project's scope.
 
 ## Kubernetes / Rancher
