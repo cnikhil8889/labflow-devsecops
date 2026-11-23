@@ -10,6 +10,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   test:
+    timeout-minutes: 20
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -29,6 +30,7 @@ jobs:
           name: dotnet-client-${{ matrix.os }}
           path: clients/LabFlow.Check/bin/Release/net8.0/
   security:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +50,7 @@ jobs:
           severity: HIGH,CRITICAL
   container-and-helm:
     needs: [test, security]
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

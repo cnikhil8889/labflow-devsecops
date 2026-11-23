@@ -4,6 +4,8 @@
 
 Read the first failing job, reproduce its exact command, record commit/runner/tool version. Python validation failure: replay the malformed JSON test. Image vulnerability: rebuild with a patched base and rerun Trivy. Helm lint/render error: inspect generated YAML before deployment. Do not disable a gate to make the badge green.
 
+A job marked *cancelled* after hitting its `timeout-minutes` budget (test 20, security 15, container-and-helm 30) usually means a hung step, most often the kind cluster, `helm --wait` or the port-forward loop. Open the last step that produced output, rerun once to rule out a runner hiccup, and raise the budget only with a recorded reason.
+
 ## Rollout timeout / ImagePullBackOff
 
 Run `kubectl get pods -n labflow`, `kubectl describe pod -n labflow <pod>`, `kubectl logs -n labflow deployment/labflow` and `helm history labflow -n labflow`. Confirm repository/tag exists, image is loaded in kind, registry access and UID compatibility. `--atomic` restores the previous successful Helm release on upgrade failure. For a manual rollback: `helm rollback labflow <known-good-revision> -n labflow --wait`. Restart/rollback discards memory-only records.
