@@ -76,6 +76,14 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(self.request("POST", "/runs", json.dumps(run))[0], 400)
         self.assertEqual(self.request("GET", "/runs")[1], {"runs": []})
 
+    def test_query_string_does_not_change_routing(self):
+        for path in ("/healthz?probe=kubelet", "/readyz?x=1"):
+            self.assertEqual(self.request("GET", path)[0], 200)
+        run = {"run_id": "q-1", "instrument": "scope-1", "status": "queued"}
+        self.assertEqual(self.request("POST", "/runs?source=cli", json.dumps(run)), (201, run))
+        self.assertEqual(self.request("GET", "/runs?limit=10")[1], {"runs": [run]})
+        self.assertEqual(self.request("GET", "/unknown?x=1")[0], 404)
+
     def test_post_to_unknown_path_is_not_found(self):
         run = {"run_id": "x", "instrument": "x", "status": "queued"}
         self.assertEqual(self.request("POST", "/healthz", json.dumps(run))[0], 404)

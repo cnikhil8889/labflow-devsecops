@@ -6,6 +6,7 @@ import os
 import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 
 LOG = logging.getLogger("labflow")
 MAX_BODY = 4096
@@ -47,16 +48,21 @@ def handler_for(registry):
             self.end_headers()
             self.wfile.write(payload)
 
+        def route(self):
+            # Match on the path only, so probes or clients adding ?query=... still resolve.
+            return urlsplit(self.path).path
+
         def do_GET(self):
-            if self.path in ("/healthz", "/readyz"):
+            path = self.route()
+            if path in ("/healthz", "/readyz"):
                 self.send_json(200, {"status": "ok"})
-            elif self.path == "/runs":
+            elif path == "/runs":
                 self.send_json(200, {"runs": registry.snapshot()})
             else:
                 self.send_json(404, {"error": "Not found"})
 
         def do_POST(self):
-            if self.path != "/runs":
+            if self.route() != "/runs":
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
