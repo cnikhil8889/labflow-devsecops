@@ -33,7 +33,7 @@ Endpoints: `GET /healthz`, `GET /readyz`, `GET /runs`, `POST /runs`. Example bod
 {"run_id":"demo-001","instrument":"microscope-01","status":"queued"}
 ```
 
-The service validates identifiers and states, rejects duplicates atomically, limits request and registry size, and emits structured access logs. Storage is memory-only: restart loses all records. Keep a single replica for this demo; a shared transactional database is needed before scaling.
+The service validates identifiers and states, rejects duplicates atomically, limits request and registry size, drops clients that stall mid-request after 10 seconds (HTTP 408), and emits structured access logs. Storage is memory-only: restart loses all records. Keep a single replica for this demo; a shared transactional database is needed before scaling.
 
 ## Delivery path
 
