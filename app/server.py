@@ -10,6 +10,9 @@ from urllib.parse import urlsplit
 
 LOG = logging.getLogger("labflow")
 MAX_BODY = 4096
+# Seconds a client may stay idle mid-request before its connection is dropped, so slow
+# or stalled clients cannot pin worker threads indefinitely (slowloris-style).
+REQUEST_TIMEOUT = 10
 
 class Registry:
     def __init__(self):
@@ -39,6 +42,8 @@ class Registry:
 
 def handler_for(registry):
     class Handler(BaseHTTPRequestHandler):
+        timeout = REQUEST_TIMEOUT
+
         def send_json(self, code, data):
             payload = json.dumps(data).encode()
             self.send_response(code)
@@ -81,9 +86,12 @@ def handler_for(registry):
                 self.send_json(409, {"error": "Duplicate run_id"})
             except OverflowError:
                 self.send_json(503, {"error": "Demo capacity reached"})
+            except TimeoutError:
+                self.close_connection = True
+                self.send_json(408, {"error": "Request body not received in time"})
 
         def log_message(self, format, *args):
-            LOG.info(json.dumps({"method": self.command, "message": format % args}))
+            LOG.info(json.dumps({"method": getattr(self, "command", None), "message": format % args}))
     return Handler
 
 if __name__ == "__main__":

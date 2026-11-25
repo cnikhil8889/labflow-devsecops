@@ -2,10 +2,11 @@
 import concurrent.futures
 import http.client
 import json
+import socket
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
-from app.server import Registry, handler_for
+from app.server import REQUEST_TIMEOUT, Registry, handler_for
 
 class ServiceTests(unittest.TestCase):
     def setUp(self):
@@ -97,6 +98,20 @@ class ServiceTests(unittest.TestCase):
         connection.close()
         self.assertEqual(response.getheader("Content-Type"), "application/json")
         self.assertEqual(response.getheader("X-Content-Type-Options"), "nosniff")
+
+    def test_stalled_body_times_out(self):
+        self.server.RequestHandlerClass.timeout = 0.5
+        with socket.create_connection(("127.0.0.1", self.server.server_port), timeout=3) as client:
+            client.sendall(b"POST /runs HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: 50\r\n\r\n{")
+            response = client.makefile("rb").read()
+        self.assertTrue(response.startswith(b"HTTP/1.0 408"), response[:40])
+        self.assertEqual(self.request("GET", "/healthz")[0], 200)
+
+    def test_idle_connection_is_closed(self):
+        self.assertEqual(self.server.RequestHandlerClass.timeout, REQUEST_TIMEOUT)
+        self.server.RequestHandlerClass.timeout = 0.5
+        with socket.create_connection(("127.0.0.1", self.server.server_port), timeout=3) as client:
+            self.assertEqual(client.recv(1), b"")
 
 if __name__ == "__main__":
     unittest.main()
